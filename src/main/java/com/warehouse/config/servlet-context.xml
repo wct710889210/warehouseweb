@@ -1,0 +1,84 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<beans xmlns="http://www.springframework.org/schema/beans"
+       xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+       xmlns:mvc="http://www.springframework.org/schema/mvc"
+       xmlns:context="http://www.springframework.org/schema/context"
+       xmlns:jpa="http://www.springframework.org/schema/data/jpa"
+       xmlns:tx="http://www.springframework.org/schema/tx"
+       xmlns:aop="http://www.springframework.org/schema/aop"
+       xsi:schemaLocation="http://www.springframework.org/schema/beans
+        http://www.springframework.org/schema/beans/spring-beans.xsd
+        http://www.springframework.org/schema/mvc
+        http://www.springframework.org/schema/mvc/spring-mvc-3.0.xsd
+        http://www.springframework.org/schema/context
+        http://www.springframework.org/schema/context/spring-context.xsd
+        http://www.springframework.org/schema/data/jpa
+        http://www.springframework.org/schema/data/jpa/spring-jpa.xsd
+        http://www.springframework.org/schema/tx
+        http://www.springframework.org/schema/tx/spring-tx.xsd
+        http://www.springframework.org/schema/aop
+        http://www.springframework.org/schema/aop/spring-aop.xsd">
+
+    <mvc:annotation-driven/>
+    <context:component-scan base-package="com.warehouse.*"/>
+
+    <bean id="viewResolver" class="org.springframework.web.servlet.view.InternalResourceViewResolver">
+        <property name="prefix" value="/WEB-INF/jsp/"/>
+        <property name="suffix" value=".jsp"/>
+        <property name="exposeContextBeansAsAttributes" value="true"/>
+    </bean>
+
+    <mvc:resources location="/static/" mapping="/static"/>
+
+    <!--整合jpa begin-->
+
+        <!-- 配置实体管理器工厂 -->
+        <bean name="entityManagerFactory" class="org.springframework.orm.jpa.LocalContainerEntityManagerFactoryBean">
+            <property name="dataSource" ref="myDatabase"/>
+            <property name="jpaVendorAdapter" ref="hibernateVendorAdapter"/>
+            <property name="packagesToScan" value="com.warehouse.entity"/>
+        </bean>
+
+        <!--配置厂商适配器-->
+        <bean name="hibernateVendorAdapter" class="org.springframework.orm.jpa.vendor.HibernateJpaVendorAdapter">
+            <property name="generateDdl" value="false" />
+            <property name="database" value="HSQL"/>
+        </bean>
+
+        <!--配置数据源-->
+        <bean id="myDatabase" class="com.mchange.v2.c3p0.ComboPooledDataSource" destroy-method="close">
+            <property name="driverClass" value="com.mysql.cj.jdbc.Driver"/>
+            <property name="jdbcUrl" value="jdbc:mysql://localhost/warehouse?useSSL=false&amp;serverTimezone=Asia/Shanghai"/>
+            <property name="user" value="root"/>
+            <property name="password" value="wct123456"/>
+            <property name="maxPoolSize" value="100"/>
+            <property name="minPoolSize" value="20"/>
+            <property name="initialPoolSize" value="20"/>
+            <property name="maxIdleTime" value="20"/>
+        </bean>
+
+    <!--整合jpa end-->
+
+    <!--整合springdata begin-->
+
+        <!--开启dao层扫描-->
+        <jpa:repositories base-package="com.warehouse.repository"/>
+
+        <!--jpa事务管理-->
+        <bean name="transactionManager" class="org.springframework.orm.jpa.JpaTransactionManager">
+            <property name="entityManagerFactory" ref="entityManagerFactory"/>
+        </bean>
+
+        <tx:advice id="txAdvice" transaction-manager="transactionManager">
+            <tx:attributes>
+                <tx:method name="*" propagation="REQUIRED" />
+            </tx:attributes>
+        </tx:advice>
+
+        <aop:config>
+            <aop:pointcut id="controllerPointcut" expression="execution(* com.warehouse.controller.*.*(..))"/>
+            <aop:advisor advice-ref="txAdvice" pointcut-ref="controllerPointcut"/>
+        </aop:config>
+
+    <!--整合springdata end-->
+</beans>
